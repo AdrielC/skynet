@@ -20,12 +20,13 @@ object Starter extends zio.App {
   private[this] implicit val logger: Logger = getLogger
 
   private val banner = """
-                         |   __    _    __          ___    ____
-                         |  / /   (_)  / /  __ __  / _ |  /  _/
-                         | / /__ / /  / /  / // / / __ | _/ /
-                         |/____//_/  /_/   \_, / /_/ |_|/___/
-                         |                /___/
-                         |""".stripMargin
+|___________                .___           __________      .__        __   
+|\_   _____/__  _______   __| _/_ __  _____\______   \____ |__| _____/  |_ 
+| |    __)_\  \/  /  _ \ / __ |  |  \/  ___/|     ___/  _ \|  |/    \   __\
+| |        \>    <  <_> ) /_/ |  |  /\___ \ |    |  (  <_> )  |   |  \  |  
+|/_______  /__/\_ \____/\____ |____//____  >|____|   \____/|__|___|  /__|  
+|        \/      \/          \/          \/                        \/      
+|""".stripMargin
 
   private lazy val conf: Config.Service = new Config.Service {
     override val config: SkynetConfig = loadConfig[SkynetConfig].toTry.get
