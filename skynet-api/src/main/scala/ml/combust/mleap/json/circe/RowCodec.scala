@@ -5,7 +5,7 @@ import io.circe.{Codec, Decoder, DecodingFailure, Encoder, HCursor, Json}
 import ml.combust.mleap.core.types._
 import ml.combust.mleap.runtime.frame.Row
 import ml.combust.mleap.tensor.{ByteString, Tensor}
-import exd.fundamenski.skynet.domain._
+import com.overstock.skynet.domain._
 
 import scala.util.Try
 

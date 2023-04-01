@@ -1,6 +1,6 @@
 package ml.combust.mleap.json
 
-import exd.fundamenski.skynet.http.DurOps
+import com.overstock.skynet.http.DurOps
 import io.circe.{Codec, Decoder, DecodingFailure, Encoder, HCursor, Json}
 import shapeless.Witness
 import cats.implicits._
@@ -9,11 +9,10 @@ import io.circe.generic.semiauto.deriveCodec
 import ml.combust.bundle.dsl.BundleInfo
 import ml.combust.bundle.serializer.SerializationFormat
 import ml.combust.mleap.executor.{BundleMeta, LoadModelRequest, Model, ModelConfig}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import sttp.tapir.Schema
 import io.circe.syntax._
 import ml.combust.mleap.core.types
-import ml.combust.mleap.core.types.{BasicType, DataType, ListType, ScalarType, StructType, TensorType}
+import ml.combust.mleap.core.types.{BasicType, ListType, ScalarType, StructType, TensorType}
 import ml.combust.mleap.runtime.frame.{DefaultLeapFrame, LeapFrame, Row}
 import ml.combust.mleap.tensor.{ByteString, DenseTensor, SparseTensor, Tensor}
 import spray.json.JsonFormat
@@ -23,7 +22,6 @@ import java.util.Base64
 import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.reflect.ClassTag
 import scala.util.Try
-import scala.util.control.NonFatal
 
 
 package object circe {
@@ -248,7 +246,7 @@ package object circe {
 
   implicit lazy val codecModelConfig: Codec[ModelConfig] = deriveCodec
   implicit lazy val codecModel: Codec[Model] = deriveCodec
-  import exd.fundamenski.skynet.util.json.ProtobufConverters._
+  import com.overstock.skynet.util.json.ProtobufConverters._
   implicit lazy val codecBundleInfo: Codec[BundleInfo] = deriveCodec
   implicit lazy val codecBundleMeta: Codec[BundleMeta] = deriveCodec
   implicit lazy val codecLoadModelRequest: Codec[LoadModelRequest] = deriveCodec

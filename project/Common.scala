@@ -1,4 +1,4 @@
-package exd.fundamenski.skynet
+package com.overstock.skynet
 
 import sbt._
 import Keys._
@@ -17,7 +17,7 @@ object Common {
   }
 
   lazy val commonSettings = Seq(
-    organization := "exd.fundamenski",
+    organization := "com.overstock",
     scalaVersion := "2.12.9",
     version := "0.3.3",
     resolvers ++= Seq(

@@ -1,4 +1,4 @@
-import exd.fundamenski.skynet._
+import com.overstock.skynet._
 import sbt._
 import sbt.Keys._
 import Common._
@@ -6,7 +6,7 @@ import sbtdocker.DockerPlugin.autoImport.ImageName
 
 import scala.language.postfixOps
 
-lazy val basePackage = "exd.fundamenski.skynet"
+lazy val basePackage = "com.overstock.skynet"
 lazy val mainClassName = s"$basePackage.Starter"
 
  lazy val `skynet` = (project in file("."))

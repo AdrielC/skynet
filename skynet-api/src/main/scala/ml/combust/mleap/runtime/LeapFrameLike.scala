@@ -1,7 +1,7 @@
 package ml.combust.mleap.runtime
 
-import exd.fundamenski.skynet.util.mleap
-import exd.fundamenski.skynet.util.mleap.{RowOps, StructOps}
+import com.overstock.skynet.util.mleap
+import com.overstock.skynet.util.mleap.{RowOps, StructOps}
 import ml.combust.mleap.core.types.StructType
 import ml.combust.mleap.runtime.FrameBuilderLike.FBLike
 import zio.console.{Console, putStrLn}

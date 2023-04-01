@@ -1,4 +1,4 @@
-package exd.fundamenski.skynet
+package com.overstock.skynet
 
 object CompilerOptions {
 
