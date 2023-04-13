@@ -1,14 +1,19 @@
-package ml.combust.mleap.json.circe
+package ml.combust.mleap.json
+package circe
 
 import io.circe.{Codec, Decoder, Encoder, HCursor, Json}
 import io.circe.generic.semiauto.{deriveCodec, deriveDecoder}
 import ml.combust.mleap.core.types.{BasicType, ListType, ScalarType, TensorType}
-import shapeless.Witness
+import shapeless.{:+:, CNil, HList, Poly, Poly1, Witness}
 import shapeless.syntax.singleton.mkSingletonOps
-import sttp.tapir.Schema
+import sttp.tapir.{Schema, SchemaType}
 import io.circe.generic.auto._
+import sttp.tapir.generic.auto._
+import sttp.tapir.generic.SchemaDerivation
 import cats.implicits._
 import io.circe.Decoder.Result
+import ml.combust.mleap.json.circe.StructField.mapStr
+import sttp.tapir.apispec.Discriminator
 
 sealed trait StructField {
   import StructField._
@@ -26,21 +31,32 @@ sealed trait StructField {
 }
 object StructField {
 
+  object mapStr extends Poly1 {
+    implicit def atWitness[A <: Witness.Lt[String]]: Case.Aux[A, String] =
+      at[A] { a: A => a.value }
+  }
+
+  private val basicTypes = List(
+    implicitly[Schema[Witness.`"string"`.T]],
+    implicitly[Schema[Witness.`"boolean"`.T]],
+    implicitly[Schema[Witness.`"byte"`.T]],
+    implicitly[Schema[Witness.`"short"`.T]],
+    implicitly[Schema[Witness.`"int"`.T]],
+    implicitly[Schema[Witness.`"long"`.T]],
+    implicitly[Schema[Witness.`"float"`.T]],
+    implicitly[Schema[Witness.`"double"`.T]],
+    implicitly[Schema[Witness.`"byte_string"`.T]]
+  )
+
   implicit val basicTypeSchema: Schema[BasicType] =
-    Schema.string[BasicType]
-      .description(List(
-        "string",
-        "boolean",
-        "byte",
-        "short",
-        "int",
-        "long",
-        "float",
-        "double",
-        "byte_string")
-        .map(s => s"'$s'")
-        .foldSmash("Must be one of [", ", ", "]"))
-      .encodedExample("double")
+    Schema[String](SchemaType.SCoproduct(
+      basicTypes, None)(a => basicTypes
+      .find(_.default.exists(_._1.toString == a))))
+      .description(basicTypes
+        .flatMap(s => s.name.map(_.fullName).orElse(s.encodedExample.map(_.toString)))
+        .foldSmash("Must be one of ['", "', '", "']"))
+      .encodedExample(""""double"""")
+      .as[BasicType]
 
   implicit val codecStructField: Codec[StructField] = new Codec[StructField] {
 
@@ -65,6 +81,12 @@ object StructField {
     case ml.combust.mleap.core.types.StructField(name, dataType) =>
       StructField.DataTypeField(name, DataType(dataType))
   }
+
+  def Boolean(name: String): StructField = StructField.BasicTypeField(name, BasicType.Boolean)
+  def String(name: String): StructField = StructField.BasicTypeField(name, BasicType.String)
+  def Long(name: String): StructField = StructField.BasicTypeField(name, BasicType.Long)
+  def Int(name: String): StructField = StructField.BasicTypeField(name, BasicType.Int)
+  def Double(name: String): StructField = StructField.BasicTypeField(name, BasicType.Double)
 
   case class BasicTypeField(name: String, `type`: BasicType) extends StructField
   object BasicTypeField {

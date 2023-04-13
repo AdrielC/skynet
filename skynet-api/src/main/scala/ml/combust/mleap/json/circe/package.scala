@@ -9,7 +9,7 @@ import io.circe.generic.semiauto.deriveCodec
 import ml.combust.bundle.dsl.BundleInfo
 import ml.combust.bundle.serializer.SerializationFormat
 import ml.combust.mleap.executor.{BundleMeta, LoadModelRequest, Model, ModelConfig}
-import sttp.tapir.Schema
+import sttp.tapir.{Schema, Validator}
 import io.circe.syntax._
 import ml.combust.mleap.core.types
 import ml.combust.mleap.core.types.{BasicType, ListType, ScalarType, StructType, TensorType}
@@ -39,7 +39,6 @@ package object circe {
     }
   }
 
-
   implicit def codecWitness[T <: String](implicit W: Witness.Aux[T]): Codec[T] = Codec.from(
     Decoder[String].emap { string =>
       if (string == W.value) W.value.asRight else Left(s"Invalid value: $string. Must be ${W.value}")
@@ -47,10 +46,12 @@ package object circe {
     Encoder.encodeString.contramap[T](str => str)
   )
 
-  implicit def schemaWitness[T <: String](implicit W: Witness.Aux[T]): Schema[T] = Schema.schemaForString
-    .map { string => if (string == W.value) W.value.some else None }(str => str)
-    .encodedExample(W.value)
-    .description(s"Value must be '${W.value}'")
+  implicit def schemaWitness[T <: String](implicit W: Witness.Aux[T]): Schema[T] = Schema
+    .schemaForString.as[T]
+    .default(W.value)
+    .name(Schema.SName(W.value))
+    .validate(Validator.enumeration(List(W.value)))
+    .encodedExample(s""""${W.value}"""")
 
 
   implicit lazy val uriCodec: Codec[URI] =

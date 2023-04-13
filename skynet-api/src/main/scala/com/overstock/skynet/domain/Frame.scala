@@ -3,7 +3,7 @@ package com.overstock.skynet.domain
 import io.circe.{Codec, Decoder, DecodingFailure, Encoder, HCursor, Json}
 import ml.combust.mleap.runtime.frame.{DefaultLeapFrame, FrameBuilder, Row, LeapFrame => LFrame}
 import cats.implicits._
-import ml.combust.mleap.core.types.{BasicType, ListType, ScalarType, StructType}
+import ml.combust.mleap.core.types.{BasicType, DataType, ListType, ScalarShape, ScalarType, StructType}
 import sttp.tapir.Schema
 import com.overstock.skynet.util.json._
 import com.overstock.skynet.util.mleap._
@@ -239,6 +239,16 @@ object Frame {
     override val schema: StructType = frame.schema
   }
   object LeapFrame {
+
+    def apply(schema: StructType,
+              dataset: Seq[Row]): LeapFrame = LeapFrame(DefaultLeapFrame(schema, dataset))
+
+    def apply(schema: (String, ml.combust.mleap.core.types.BasicType)*)
+             (dataset: Row*): Try[LeapFrame] =
+      StructType(schema.toSeq.map(a =>
+        ml.combust.mleap.core.types.StructField(
+          a._1 -> DataType(a._2, ScalarShape(true)))))
+        .map(s => LeapFrame(DefaultLeapFrame(s, dataset)))
 
     implicit val leapFrameCodec: Codec[LeapFrame] =
       MleapDefaultLeapFrameReaderCodec.imap(LeapFrame(_))(_.frame)
