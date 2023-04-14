@@ -75,6 +75,7 @@ object LatencyTest extends Endpoints with zio.App {
                                   .withName(sample.nRows.toString))
                       }.provideLayer(Clock.live))
 
+
         } yield {
 
           val path = os.pwd / "plots" / "rank" / "latency" / model / exec.toString
