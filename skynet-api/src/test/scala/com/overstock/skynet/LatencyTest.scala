@@ -59,21 +59,21 @@ object LatencyTest extends Endpoints with zio.App {
 
           times <- client.resource.use(
                     client =>
-                      ZIO.collectAll(
-                        examples.map(
-                          sample =>
-                            runRanks(
-                              client,
-                              getSample,
-                              createRankReq andThen rank,
-                              nTrials = nTrials,
-                              par     = par)(sample)
-                              .map(
-                                times =>
-                                  Box()
-                                    .withX(times.map(_.toMillis).filter(_ < 1000))
-                                    .withBoxmean(BoxMean.True)
-                                    .withName(sample.nRows.toString)))).provide(Has(Clock.Service.live)))
+                      ZIO.foreach(examples) {
+                        sample =>
+                          runRanks(
+                            client,
+                            getSample,
+                            createRankReq andThen rank,
+                            nTrials = nTrials,
+                            par = par)(sample)
+                            .map(
+                              times =>
+                                Box()
+                                  .withX(times.map(_.toMillis).filter(_ < 1000))
+                                  .withBoxmean(BoxMean.True)
+                                  .withName(sample.nRows.toString))
+                      }.provideLayer(Clock.live))
 
         } yield {
 

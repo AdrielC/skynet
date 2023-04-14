@@ -39,11 +39,11 @@ sealed trait Frame extends Product with Serializable with LFrame[Frame] {
 object Frame {
 
   object sample {
-    private val ctxSchema = StructType("cluster_products" -> ListType(BasicType.String)).get
+    private val ctxSchema = StructType("cart_products" -> ListType(BasicType.String)).get
     private val resSchemas = StructType(
-      "ticker"           -> ScalarType(BasicType.String),
-      "price"  -> ScalarType(BasicType.Double),
-      "price_1day_high" -> ScalarType(BasicType.Double)).get
+      "productId"   -> ScalarType(BasicType.String),
+      "price"       -> ScalarType(BasicType.Double),
+      "cvr"         -> ScalarType(BasicType.Double)).get
 
     val leapFrame: LeapFrame = LeapFrame((
       createSampleLeapFrame(ctxSchema, 2) zip
@@ -71,9 +71,9 @@ object Frame {
 
     val prefixedFrame: PrefixedFrame = PrefixedFrame(
       frame = createSampleLeapFrame(StructType(
-        "ticker"           -> ScalarType(BasicType.String),
-        "price"  -> ScalarType(BasicType.Double),
-        "price_1day_high" -> ScalarType(BasicType.Double)).get),
+        "productId" -> ScalarType(BasicType.String),
+        "price"     -> ScalarType(BasicType.Double),
+        "cvr"       -> ScalarType(BasicType.Double)).get),
       prefix = "result_")
 
     val sampleExamples: List[Example[Frame]] = List(
@@ -243,11 +243,10 @@ object Frame {
     def apply(schema: StructType,
               dataset: Seq[Row]): LeapFrame = LeapFrame(DefaultLeapFrame(schema, dataset))
 
-    def apply(schema: (String, ml.combust.mleap.core.types.BasicType)*)
+    def apply(schema: (String, BasicType)*)
              (dataset: Row*): Try[LeapFrame] =
       StructType(schema.toSeq.map(a =>
-        ml.combust.mleap.core.types.StructField(
-          a._1 -> DataType(a._2, ScalarShape(true)))))
+        ml.combust.mleap.core.types.StructField(a._1 -> DataType(a._2, ScalarShape(true)))))
         .map(s => LeapFrame(DefaultLeapFrame(s, dataset)))
 
     implicit val leapFrameCodec: Codec[LeapFrame] =

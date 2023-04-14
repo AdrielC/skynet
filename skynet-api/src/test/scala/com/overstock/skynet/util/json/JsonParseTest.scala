@@ -2,9 +2,7 @@ package com.overstock.skynet.util.json
 
 import com.overstock.skynet.domain.Frame
 import io.circe.syntax.EncoderOps
-import ml.bundle.{Field, Schema}
-import ml.combust.mleap.core.types.{BasicType, StructField}
-import ml.combust.mleap.json.circe.StructField.{BasicTypeField, DataType}
+import ml.combust.mleap.core.types.BasicType
 import ml.combust.mleap.runtime.frame.{DefaultLeapFrame, Row}
 import org.scalatest.FlatSpec
 
@@ -578,32 +576,44 @@ class JsonParseTest extends FlatSpec {
 
   it should "encode" in {
 
-    import io .circe.parser._
+    val frame = Frame.LeapFrame(
+//      "bool"  -> BasicType.Boolean,
+      "str"   -> BasicType.String,
+      "str2"   -> BasicType.String
+    )(
+      Row("a", "a"),
+      Row("b", "b"),
+      Row("c", "c")
+    ).get
 
-    val frameJsonString = Frame.LeapFrame(
-      "bool" -> BasicType.Boolean)(
-      Row(false),
-      Row(false),
-      Row(true)
-    ).get.asJson.spaces2SortKeys
+    frame.show(5)
+
+    val frameJsonString = frame.asJson.spaces2SortKeys
 
     assert(frameJsonString === """{
              |  "rows" : [
              |    [
-             |      false
+             |      "a",
+             |      "a"
              |    ],
              |    [
-             |      false
+             |      "b",
+             |      "b"
              |    ],
              |    [
-             |      true
+             |      "c",
+             |      "c"
              |    ]
              |  ],
              |  "schema" : {
              |    "fields" : [
              |      {
-             |        "name" : "bool",
-             |        "type" : "boolean"
+             |        "name" : "str",
+             |        "type" : "string"
+             |      },
+             |      {
+             |        "name" : "str2",
+             |        "type" : "string"
              |      }
              |    ]
              |  }
