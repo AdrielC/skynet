@@ -8,11 +8,10 @@ import com.overstock.skynet.service.model.{ModelEnv, ModelTask}
 import fs2.Pipe
 import org.http4s.{EntityBody, HttpRoutes}
 import org.http4s.websocket.WebSocketFrame
-import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Codec.{PlainCodec, XmlCodec}
 import sttp.tapir.CodecFormat.Xml
 import sttp.tapir.{DecodeResult, Endpoint}
-import sttp.tapir.server.ServerEndpoint
+import com.overstock.skynet.util.json._
 import sttp.tapir.server.http4s.Http4sServerOptions.{defaultCreateFile, defaultDeleteFile}
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
@@ -60,7 +59,7 @@ package object http extends ZTapir {
     def toRoute(logic: R => RIO[ModelEnv, O])
                (implicit interpreter: Http4sServerInterpreter[ModelTask],
                 ev: IN =:= Unit, ev2: ErrorResponse <:< E): HttpRoutes[ModelTask] = {
-      val e = end.zServerLogic(u => (logic(u).mapError(ErrorResponse.toServiceError(_))))
+      val e = end.zServerLogic(logic(_).mapError(ErrorResponse.toServiceError(_)))
       interpreter.toRoutes(e)
     }
   }

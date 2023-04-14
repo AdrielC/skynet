@@ -1,5 +1,6 @@
 package com.overstock.skynet.http
 
+import cats.implicits.none
 import com.overstock.skynet.service.model.Models.Service.ModelsError
 import com.overstock.skynet.util.json.jsonBody
 import io.circe.generic.semiauto.deriveCodec
@@ -32,32 +33,33 @@ object ErrorResponse {
     .schemaForInt
     .map(StatusCode.safeApply(_).toOption)(_.code)
     .description("Status code must be in the allowed range of 100-599")
-    .encodedExample(StatusCode.BadRequest.code)
+    .encodedExample(StatusCode.InternalServerError.code.toString)
+    .copy(default = Some((StatusCode.InternalServerError, none[Any])))
 
   implicit lazy val codecError: Codec[ErrorResponse] = deriveCodec
 
   implicit lazy val schemaError: Schema[ErrorResponse] = Schema.derived[ErrorResponse]
 
-  def toServiceError(error: Throwable, code: Status = Status.InternalServerError): ErrorResponse =
+  def toServiceError[E <: Throwable](error: E, code: Status = Status.InternalServerError): ErrorResponse =
     ErrorResponse(
-      error = Option(error.getClass.getName).map(_.replace(".", "_")).getOrElse("unchecked"),
+      error = Option(error.getClass.getName)
+        .map(_.replace(".", "$").split('$').last)
+        .getOrElse("Throwable"),
       message = Option(error.getMessage).getOrElse("Internal service error"),
       code = StatusCode.unsafeApply(code.code))
 
 
-  val defaultErrorMapping: PartialFunction[Throwable, ErrorResponse] = {
+  val defaultErrorMapping: Throwable => ErrorResponse = {
     case timeout: TimeoutException => toServiceError(timeout, Status.RequestTimeout)
     case m: ModelsError => toServiceError(m, Status.NotFound)
     case other: Throwable => toServiceError(other)
   }
 
   case class SkynetExceptionHandler[F[_]]
-  (errorMapping: PartialFunction[Throwable, ErrorResponse] = defaultErrorMapping) extends ExceptionHandler[F] {
-
+  (errorMapping: Function[Throwable, ErrorResponse] = defaultErrorMapping) extends ExceptionHandler[F] {
     def apply(ctx: ExceptionContext)(implicit monad: MonadError[F]): F[Option[ValuedEndpointOutput[_]]] = monad.eval {
-      defaultErrorMapping.lift(ctx.e).map { e =>
-        ValuedEndpointOutput(statusCode.and(jsonBody[ErrorResponse]), (e.code, e))
-      }
+      val e = defaultErrorMapping(ctx.e)
+      Some(ValuedEndpointOutput(jsonBody[ErrorResponse], e))
     }
   }
 }

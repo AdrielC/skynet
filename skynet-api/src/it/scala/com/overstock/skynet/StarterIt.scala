@@ -8,6 +8,7 @@ import zio.{Has, ZEnv, ZIO}
 import sttp.tapir.client.http4s.Http4sClientInterpreter
 import zio.interop.catz._
 import org.http4s.client._
+import org.http4s.implicits.http4sLiteralsSyntax
 import sttp.tapir.DecodeResult
 
 class StarterIt extends IntegrationTest {
@@ -27,8 +28,8 @@ class StarterIt extends IntegrationTest {
           }
 
         endpoints           = routes.endPoints
-        getSample           = clientInterpreter.toRequest(endpoints.getSampleInput, baseUri = Some("localhost"))
-        rank                = clientInterpreter.toRequest(endpoints.rankEndpoint, baseUri = Some("localhost"))
+        getSample           = clientInterpreter.toRequest(endpoints.getSampleInput, baseUri = Some(uri"localhost"))
+        rank                = clientInterpreter.toRequest(endpoints.rankEndpoint, baseUri = Some(uri"localhost"))
 
         (sampleReq, decode) = getSample(GetSample("evrln-ltr", 200, List("context_sku_ids|user", "context"), None))
 
