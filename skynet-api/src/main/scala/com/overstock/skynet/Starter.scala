@@ -19,14 +19,14 @@ object Starter extends zio.App {
   private[this] implicit val logger: Logger = getLogger
 
   private val banner = """
-|
-|eeeee e   e  e    e    eeeee eeee eeeee
-|8   " 8   8  8    8    8   8 8      8
-|8eeee 8eee8e 8eeee8    8e  8 8eee   8e
-|   88 88   8   88      88  8 88     88
-|8ee88 88   8   88      88  8 88ee   88
-|
-|""".stripMargin
+  |
+  |eeeee e   e  e    e    eeeee eeee eeeee
+  |8   " 8   8  8    8    8   8 8      8
+  |8eeee 8eee8e 8eeee8    8e  8 8eee   8e
+  |   88 88   8   88      88  8 88     88
+  |8ee88 88   8   88      88  8 88ee   88
+  |
+  |""".stripMargin
 
   private lazy val conf: Config.Service = new Config.Service {
     override val config: SkynetConfig = loadConfig[SkynetConfig].toTry.get
@@ -64,7 +64,7 @@ object Starter extends zio.App {
 
   override lazy val platform: Platform = Platform.fromExecutor(async.asyncExecutor)
 
-  val program = UIO {
+  private val program = UIO {
     logger.info(banner)
     logger.info(BuildInfo.toString)
     logger.info("Available processors: " + Runtime.getRuntime.availableProcessors())
@@ -72,7 +72,5 @@ object Starter extends zio.App {
   } *> Server.run
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
-    program
-    .provideCustomLayer(serviceLayers)
-    .exitCode
+    program.provideLayer(serviceLayers).exitCode
 }

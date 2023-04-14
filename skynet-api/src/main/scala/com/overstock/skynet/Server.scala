@@ -5,10 +5,10 @@ import com.overstock.skynet.service.config.Config
 import com.overstock.skynet.service.threads.Async
 import com.overstock.skynet.service.model.{ModelEnv, ModelTask}
 import org.http4s.blaze.channel.{DefaultMaxConnections, DefaultPoolSize}
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.defaults
 import zio.{Has, ZIO}
 import zio.interop.catz._
-import org.http4s.blaze.server.BlazeServerBuilder
 
 object Server {
 

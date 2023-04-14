@@ -11,8 +11,7 @@ import sttp.tapir._
 
 object TapirJsonCirce extends TapirJsonCirce
 trait TapirJsonCirce {
-
-  def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(circeCodec[T])
+  def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = stringBodyUtf8AnyFormat(circeCodec[T])
 
   lazy val jsonPrinter: Printer = Printer(dropNullValues = true, indent = "")
 

@@ -9,11 +9,8 @@ import shapeless.syntax.singleton.mkSingletonOps
 import sttp.tapir.{Schema, SchemaType}
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
-import sttp.tapir.generic.SchemaDerivation
 import cats.implicits._
 import io.circe.Decoder.Result
-import ml.combust.mleap.json.circe.StructField.mapStr
-import sttp.tapir.apispec.Discriminator
 
 sealed trait StructField {
   import StructField._
@@ -31,32 +28,8 @@ sealed trait StructField {
 }
 object StructField {
 
-  object mapStr extends Poly1 {
-    implicit def atWitness[A <: Witness.Lt[String]]: Case.Aux[A, String] =
-      at[A] { a: A => a.value }
-  }
-
-  private val basicTypes = List(
-    implicitly[Schema[Witness.`"string"`.T]],
-    implicitly[Schema[Witness.`"boolean"`.T]],
-    implicitly[Schema[Witness.`"byte"`.T]],
-    implicitly[Schema[Witness.`"short"`.T]],
-    implicitly[Schema[Witness.`"int"`.T]],
-    implicitly[Schema[Witness.`"long"`.T]],
-    implicitly[Schema[Witness.`"float"`.T]],
-    implicitly[Schema[Witness.`"double"`.T]],
-    implicitly[Schema[Witness.`"byte_string"`.T]]
-  )
-
   implicit val basicTypeSchema: Schema[BasicType] =
-    Schema[String](SchemaType.SCoproduct(
-      basicTypes, None)(a => basicTypes
-      .find(_.default.exists(_._1.toString == a))))
-      .description(basicTypes
-        .flatMap(s => s.name.map(_.fullName).orElse(s.encodedExample.map(_.toString)))
-        .foldSmash("Must be one of ['", "', '", "']"))
-      .encodedExample(""""double"""")
-      .as[BasicType]
+    Schema.derivedEnumeration[BasicType].apply(Some(_.toString))
 
   implicit val codecStructField: Codec[StructField] = new Codec[StructField] {
 
@@ -141,11 +114,11 @@ object StructField {
 
     def apply(dataTypeFormat: ml.combust.mleap.core.types.DataType): StructField.DataType = dataTypeFormat match {
       case ml.combust.mleap.core.types.ScalarType(base, isNullable) =>
-        DataType.ScalarType("basic".narrow, base, if(!isNullable) Some(isNullable) else None)
+        DataType.ScalarType("basic".narrow, base, if (!isNullable) Some(isNullable) else None)
       case ml.combust.mleap.core.types.ListType(base, isNullable) =>
-        DataType.ListType("list".narrow, base, if(!isNullable) Some(isNullable) else None)
+        DataType.ListType("list".narrow, base, if (!isNullable) Some(isNullable) else None)
       case ml.combust.mleap.core.types.TensorType(base, dimensions, isNullable) =>
-        DataType.TensorType("tensor".narrow, base, if(!isNullable) Some(isNullable) else None, dimensions)
+        DataType.TensorType("tensor".narrow, base, if (!isNullable) Some(isNullable) else None, dimensions)
     }
   }
 }

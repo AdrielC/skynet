@@ -4,7 +4,8 @@ import com.overstock.skynet.service.model.ModelTask
 import com.overstock.skynet.service.threads.Async
 import cats.data.{Kleisli, OptionT}
 import io.prometheus.client._
-import org.http4s.HttpRoutes
+import org.http4s.{HttpRoutes, Status}
+import sttp.model.StatusCode
 import zio.blocking.{Blocking, blockingExecutor, effectBlocking, effectBlockingIO}
 import zio.clock.nanoTime
 import zio.duration.Duration
@@ -28,18 +29,25 @@ case class MetricsMiddleware(bucketsInMillis: List[Double], registry: CollectorR
     Kleisli(req => OptionT(
       for {
         (duration, rs)        <- service(req).value.timed
-        m         <- (rs match {
-          case Some(response) => collectMetrics(duration, response.status.code, serviceName)
-          case None           => collectMetrics(duration, code = 500, serviceName)
+        _                     <- (rs match {
+          case Some(response) => collectMetrics(duration, serviceName, response.status.code)
+          case None           => recordException(serviceName)
         }).forkDaemon
       } yield rs
     ))
 
-  private val httpRequestsTotal = Counter
+  private val totalResponseCounter = Counter
+    .build()
+    .name("total_reponse_count")
+    .help("Total responses")
+    .labelNames("service", "status")
+    .register(registry)
+
+  private val failedRequestsCounter = Counter
     .build()
     .name("http_requests_total")
     .help("Total http requests received")
-    .labelNames("service", "status")
+    .labelNames("service", "error")
     .register(registry)
 
   private val poolEnqueued = Gauge
@@ -71,9 +79,11 @@ case class MetricsMiddleware(bucketsInMillis: List[Double], registry: CollectorR
     .buckets(bucketsInMillis: _*)
     .register(registry)
 
-  def collectMetrics(duration: zio.duration.Duration, code: Int, serviceName: String): ModelTask[Unit] =
-    effectBlocking(httpRequestsTotal.labels(serviceName, code.toString).inc()) &>
-      effectBlocking(responseTime.labels(serviceName, code.toString).observe(duration.toMillis))
+  def collectMetrics(duration: zio.duration.Duration, service: String, code: Int): ModelTask[Unit] =
+    effectBlocking(totalResponseCounter.labels(service, code.toString).inc()) &>
+      effectBlocking(responseTime.labels(service, code.toString).observe(duration.toMillis))
+  def recordException(serviceName: String, error: Option[String] = None): ModelTask[Unit] =
+    effectBlocking(failedRequestsCounter.labels(serviceName, error.getOrElse("unchecked")).inc())
 
   private def collectExec(executor: Executor, name: String): RIO[Blocking, Unit] =
     executor.metrics.fold[RIO[Blocking, Unit]](ZIO.unit) { metrics =>

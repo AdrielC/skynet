@@ -6,111 +6,104 @@ import com.overstock.skynet.service.model.{ModelTask, Models, ModelsService}
 import org.http4s.server.Router
 import org.http4s.{EmptyBody, HttpApp, HttpRoutes}
 import sttp.model.StatusCode
-import sttp.tapir.Endpoint
-import sttp.tapir.metrics.{EndpointMetric, Metric}
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.AnyEndpoint
+import sttp.tapir.server.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.swagger.http4s.SwaggerHttp4s
+import sttp.tapir.swagger.{SwaggerUI, SwaggerUIOptions}
 import zio.{Task, ZIO, ZLayer}
 import zio.interop.catz._
-import org.http4s.syntax.kleisli._
 import cats.implicits._
-import com.overstock.skynet.service.config.SkynetConfig
-import com.overstock.skynet.service.config.SkynetConfig
+import zio.duration.{Duration}
 
 class Routes(
   skynetConfig: SkynetConfig,
   val endPoints: Endpoints,
-  zHttp4sServerOptions: Http4sServerOptions[ModelTask, ModelTask]
+  zHttp4sServerOptions: Http4sServerOptions[ModelTask]
 ) {
   import endPoints._
+
+  private def collectMetrics(e: sttp.tapir.AnyEndpoint, code: StatusCode)
+                            (implicit startTime: Duration): ModelTask[Unit] =
+    zio.clock.nanoTime >>= (responseTime => {
+      val duration = Duration.fromNanos(responseTime).minus(startTime)
+      e.info.name.fold[ModelTask[Unit]](ZIO.unit)(
+        metricsCollector.collectMetrics(duration, _, code.code))
+    })
 
   private val metricsCollector = MetricsMiddleware()
 
   private val metricsService = MetricsService()
 
-  implicit val interpreter: Http4sServerInterpreter[ModelTask] =
+  private implicit val interpreter: Http4sServerInterpreter[ModelTask] =
     Http4sServerInterpreter[ModelTask](zHttp4sServerOptions.appendInterceptor(
-      new MetricsRequestInterceptor[ModelTask, Http4sResponseBody[ModelTask]](
+      new MetricsRequestInterceptor[ModelTask](
         metrics = List(
           Metric[ModelTask, Http4sResponseBody[ModelTask]](
             metric = Right(EmptyBody),
-            onRequest = (req, _, _) => zio.clock.nanoTime
-              .flatMap(startTime =>
+            onRequest = (_, _, _) => zio.clock.nanoTime.map(Duration.fromNanos)
+              .flatMap(implicit startTime =>
                 Task(EndpointMetric[ModelTask](
                   onEndpointRequest = None,
-                  onResponse = Some((e, r) => collectMetrics(e, r.code)(req, startTime)),
-                  onException = Some((e, _) => collectMetrics(e, StatusCode.BadRequest)(req, startTime))))
-            ))),
+                  onResponseHeaders = Some((e, r) => collectMetrics(e, r.code)),
+                  onException = (Some(
+                    Function.untupled((_: (AnyEndpoint, Throwable)).leftMap(_.info.name) match {
+                      case (Some(name), r: ErrorResponse) => metricsCollector.recordException(name, r.error.some)
+                      case (Some(name), _) => metricsCollector.recordException(name)
+                      case _ => ZIO.unit
+                    })))))))),
         ignoreEndpoints = utilityEndpoints)))
 
-  val transform =
-    transformEndpoint.toRoute(ModelsService.transform)
+  private val transform = transformEndpoint.toRoute(ModelsService.transform)
 
-  val rank =
-    rankEndpoint.toRoute(ModelsService.rank)
+  private val rank = rankEndpoint.toRoute(ModelsService.rank)
 
-  val modelHealthCheckRoute =
-    modelHealthCheck.toRoute((ModelsService.warmupModel _).tupled)
+  private val modelHealthCheckRoute = modelHealthCheck.toRoute((ModelsService.warmupModel _).tupled)
 
-  val serviceHealthCheckRoute =
-    serviceHealthCheck.toRoute(_ => Models.getModels.unit)
+  private val serviceHealthCheckRoute = serviceHealthCheck.toRoute(_ => Models.getModels.unit)
 
-  val loadModelRoute =
-    loadModelEndpoint.toRoute(Models.put)
+  private val loadModelRoute = loadModelEndpoint.toRoute(Models.put)
 
-  val unloadModelRoute =
-    unloadModelEndpoint.toRoute(Models.delete)
+  private val unloadModelRoute = unloadModelEndpoint.toRoute(Models.delete)
 
-  val getModelRoute =
-    getModelEndpoint.toRoute(Models.getModelInfo)
+  private val getModelRoute = getModelEndpoint.toRoute(Models.getModelInfo)
 
-  val getModelsRoute =
-    getModelsEndpoint.toRoute(_ => Models.getModels.map(_.values.toList))
+  private val getModelsRoute = getModelsEndpoint.toRoute(_ => Models.getModels.map(_.values.toList))
 
-  val getModelSampleRoute =
-    getSampleInput.toRoute(ModelsService.getModelSample)
+  private val getModelSampleRoute = getSampleInput.toRoute(ModelsService.getModelSample)
 
-  val graphModelRoute =
-    modelVisualize.toRoute(ModelsService.graphModel)
+  private val graphModelRoute = modelVisualize.toRoute(ModelsService.graphModel)
 
-  private def collectMetrics(e: Endpoint[_, _, _, _], code: StatusCode)
-                            (implicit a: ServerRequest, startTime: Long): ModelTask[Unit] =
-    zio.clock.nanoTime >>= (responseTime => {
-      val duration = zio.duration.Duration.fromNanos(responseTime - startTime)
-      e.info.name.fold[ModelTask[Unit]](ZIO.unit)(
-        metricsCollector.collectMetrics(duration, code.code, _))
-    })
+  private val metrics: HttpRoutes[ModelTask] = metricsCollector.threadMetrics(metricsService)
 
-  val docs: HttpRoutes[ModelTask] = new SwaggerHttp4s(
-    yaml        = docsYaml,
-    contextPath = skynetConfig.swagger.contextPath,
-    yamlName    = skynetConfig.swagger.yamlName)
-    .routes[ModelTask]
+  private val docs: HttpRoutes[ModelTask] = interpreter.toRoutes(
+    SwaggerUI[ModelTask](
+      yaml = docsYaml,
+      options = SwaggerUIOptions.default
+        .contextPath(skynetConfig.swagger.contextPath)
+        .yamlName(skynetConfig.swagger.yamlName)))
 
-  val metrics: HttpRoutes[ModelTask] =
-    metricsCollector.threadMetrics(metricsService)
+   val app: HttpApp[ModelTask] = {
 
-  val routes =
-    List(
-      rank,
-      transform,
-      modelHealthCheckRoute,
-      serviceHealthCheckRoute,
-      loadModelRoute,
-      unloadModelRoute,
-      getModelRoute,
-      getModelsRoute,
-      getModelSampleRoute,
-      graphModelRoute,
-      docs
-    ).reduce(_ <+> _)
+     val serviceRoutes = List(
+       rank,
+       transform,
+       modelHealthCheckRoute,
+       serviceHealthCheckRoute,
+       loadModelRoute,
+       unloadModelRoute,
+       getModelRoute,
+       getModelsRoute,
+       getModelSampleRoute,
+       graphModelRoute,
+       docs
+     ).reduce(_ <+> _)
 
-   val app: HttpApp[ModelTask] = Router(
-    "/"         -> routes,
-    "/metrics"  -> metrics)
-    .orNotFound
+     Router(
+       "/"        -> serviceRoutes,
+       "/metrics" -> metrics
+     ).orNotFound
+   }
 }
 
 object Routes {

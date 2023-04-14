@@ -5,15 +5,15 @@ import ml.combust.mleap.runtime.frame.DefaultLeapFrame
 import sttp.tapir._
 import com.overstock.skynet.util.json._
 import ml.combust.mleap.json.circe._
-import sttp.tapir.openapi.circe.yaml._
+import sttp.tapir.openapi.circe._
 import cats.implicits._
 import com.overstock.skynet.domain.Req.{RankFrame, TransformFrame}
 import com.overstock.skynet.domain.{ExecStrategy, Frame, GetSample, GraphModel, HandleMissing, Model, ModelInfo, RankingResult, Select}
+import sttp.apispec.openapi.circe.yaml._
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 import java.net.URI
-
 import scala.xml.NodeSeq
 
 class Endpoints(models: Map[String, URI] = Map.empty) {

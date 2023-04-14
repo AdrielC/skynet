@@ -5,6 +5,7 @@ import io.circe.syntax.EncoderOps
 import ml.combust.mleap.core.types.BasicType
 import ml.combust.mleap.runtime.frame.{DefaultLeapFrame, Row}
 import org.scalatest.FlatSpec
+import sttp.tapir.Codec
 
 class JsonParseTest extends FlatSpec {
 
@@ -558,6 +559,35 @@ class JsonParseTest extends FlatSpec {
       |                ],
       |                0.012652415693076884,
       |                0.0025763991633079943
+      |            ],
+      |            [
+      |                0,
+      |                0,
+      |                496,
+      |                0,
+      |                238,
+      |                0,
+      |                0,
+      |                101,
+      |                0,
+      |                1364.9,
+      |                "asdf",
+      |                0,
+      |                0,
+      |                392,
+      |                0,
+      |                "as",
+      |                119,
+      |                [
+      |                    ""
+      |                ],
+      |                0.1,
+      |                0.0,
+      |                [
+      |                    ""
+      |                ],
+      |                0.0,
+      |                0.9
       |            ]
       |        ]
       |    }
@@ -570,14 +600,12 @@ class JsonParseTest extends FlatSpec {
 
     val frame = decode[Frame](frameJson)
 
-    println(frameJson)
-    println(frame.toTry.get.flatten.get)
+    Frame.LeapFrame(frame.toTry.get.flatten.get).show()
   }
 
   it should "encode" in {
 
     val frame = Frame.LeapFrame(
-//      "bool"  -> BasicType.Boolean,
       "str"   -> BasicType.String,
       "str2"   -> BasicType.String
     )(

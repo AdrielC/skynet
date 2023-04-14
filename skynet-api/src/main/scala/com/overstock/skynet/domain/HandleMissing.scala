@@ -46,7 +46,9 @@ object HandleMissing {
     override def rawDecode(l: String): DecodeResult[HandleMissing] = l match {
       case "impute" => Value(Impute())
       case "error"  => Value(Error())
-      case other    => InvalidValue(List(ValidationError.Custom(invalidValue = other, message = descr)))
+      case other    => InvalidValue(List(ValidationError(
+        Validator.enumeration(List("impute", "error")),
+        invalidValue = other, customMessage = Some(descr))))
     }
 
     override def encode(h: HandleMissing): String = h.toString

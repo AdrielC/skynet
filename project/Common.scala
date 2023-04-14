@@ -25,6 +25,7 @@ object Common {
       Resolver.jcenterRepo,
       Resolver.sbtPluginRepo("releases"),
       Resolver.mavenLocal,
+      Resolver.mavenLocal,
       Resolver.sonatypeRepo("releases"),
       Resolver.sonatypeRepo("snapshots")
     ),

@@ -8,9 +8,11 @@ import com.overstock.skynet.service.model.{ModelEnv, ModelTask}
 import fs2.Pipe
 import org.http4s.{EntityBody, HttpRoutes}
 import org.http4s.websocket.WebSocketFrame
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Codec.{PlainCodec, XmlCodec}
 import sttp.tapir.CodecFormat.Xml
-import sttp.tapir.DecodeResult
+import sttp.tapir.{DecodeResult, Endpoint}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.http4s.Http4sServerOptions.{defaultCreateFile, defaultDeleteFile}
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
@@ -25,7 +27,7 @@ import zio.blocking.Blocking
 
 import java.net.URI
 
-package object http {
+package object http extends ZTapir {
 
   import org.http4s.circe.CirceEntityCodec._
   import org.http4s.circe._
@@ -53,22 +55,25 @@ package object http {
     .mapDecode(s => Try(new URI(s)).fold(DecodeResult.Error(s, _), DecodeResult.Value(_)))(_.toString)
     .schema(util.json.schemaURI)
 
-  implicit class EndpointToRoute[I, O](private val end: ZEndpoint[I, ErrorResponse, O]) extends AnyVal {
-
-    def toRoute[R](logic: I => ZIO[ModelEnv, Throwable, O])
-                  (implicit interpreter: Http4sServerInterpreter[ModelTask]): HttpRoutes[ModelTask] =
-      interpreter.toRoutes(end)(logic(_).mapError(ErrorResponse.toServiceError(_)).either)
+  implicit class EndpointToRoute[IN, R, E, O, RR]
+  (private val end: Endpoint[IN, R, E, O, Any]) extends AnyVal {
+    def toRoute(logic: R => RIO[ModelEnv, O])
+               (implicit interpreter: Http4sServerInterpreter[ModelTask],
+                ev: IN =:= Unit, ev2: ErrorResponse <:< E): HttpRoutes[ModelTask] = {
+      val e = end.zServerLogic(u => (logic(u).mapError(ErrorResponse.toServiceError(_))))
+      interpreter.toRoutes(e)
+    }
   }
 
-  val defaultServerOptions: Http4sServerOptions[ModelTask, ModelTask] = {
+  val defaultServerOptions: Http4sServerOptions[ModelTask] = {
     import zio.interop.catz._
-    Http4sServerOptions[ModelTask, ModelTask](
+    Http4sServerOptions[ModelTask](
       defaultCreateFile[ModelTask],
       defaultDeleteFile[ModelTask],
       ioChunkSize = 8192 * 2,
       interceptors = List(
-        new ExceptionInterceptor(SkynetExceptionHandler),
-        new DecodeFailureInterceptor(DefaultDecodeFailureHandler.handler)
+        new ExceptionInterceptor(SkynetExceptionHandler()),
+        new DecodeFailureInterceptor(DefaultDecodeFailureHandler.default)
       ))
   }
 }

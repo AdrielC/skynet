@@ -10,7 +10,6 @@ import sttp.tapir.EndpointIO.Example
 import sttp.tapir.Schema.SName
 import sttp.tapir.{CodecFormat, DecodeResult, Schema, ValidationError, Validator}
 import zio.ExecutionStrategy
-
 import scala.util.Try
 
 sealed trait ExecStrategy extends Product with Serializable {
@@ -71,15 +70,13 @@ object ExecStrategy {
   implicit val plainCodecExecStrategy: PlainCodec[ExecStrategy] = new PlainCodec[ExecStrategy] {
 
     override def rawDecode(l: String): DecodeResult[ExecStrategy] =
-      ExecStrategy
-        .parse(l)
-        .map(Value(_))
+      ExecStrategy.parse(l).map(Value(_))
         .getOrElse(InvalidValue(List(
-          ValidationError.Custom(
+          ValidationError(
+            Validator.pattern("^(seq$)|^(par$)|^(par-[0-9]*[0-9])$"),
             invalidValue = l,
-            message = desc,
-            path = Nil
-          ))))
+            customMessage = desc.some,
+            path = Nil))))
 
     override def encode(h: ExecStrategy): String = h.toString
 

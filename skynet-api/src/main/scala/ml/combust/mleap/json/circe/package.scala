@@ -48,7 +48,6 @@ package object circe {
 
   implicit def schemaWitness[T <: String](implicit W: Witness.Aux[T]): Schema[T] = Schema
     .schemaForString.as[T]
-    .default(W.value)
     .name(Schema.SName(W.value))
     .validate(Validator.enumeration(List(W.value)))
     .encodedExample(s""""${W.value}"""")

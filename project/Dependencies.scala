@@ -19,7 +19,8 @@ object Dependencies {
       val jwtAuthentikat  = "0.4.5"
       val janinoVersion   = "3.0.12"
       val swaggerUi       = "3.22.2"
-      val tapir           = "0.19.0-M2"
+      val tapir           = "1.2.11"
+      val tapirCirce      = "1.0.0-M9"
       val mleap           = "0.16.0"
       val xgbPredictor    = "0.3.17"
       val reftree         = "1.4.1"
@@ -40,15 +41,15 @@ object Dependencies {
     val http4s            = "org.http4s" %% "http4s-client" % Version.http4s
     val http4sPrometheus  = "org.http4s" %% "http4s-prometheus-metrics" % Version.http4s
     val http4sCirce       = "org.http4s" %% "http4s-circe" % Version.http4s
-    val http4sBlaze       = "org.http4s" %% "http4s-blaze-client" % Version.http4s
-
+    val http4sBlazeClient = "org.http4s" %% "http4s-blaze-client" % Version.http4s
+    val http4sBlazeServer = "org.http4s" %% "http4s-blaze-server" % Version.http4s
     // ZIO
     val zioCache          = "dev.zio" %% "zio-cache" % "0.1.0"
 
     // Tapir
     val http4sClient      = "com.softwaremill.sttp.tapir" %% "tapir-http4s-client" % Version.tapir
-    val tapirhttp4sZIO    = "com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % Version.tapir
-    val tapirZIOHttp      = "com.softwaremill.sttp.tapir" %% "tapir-zio-http" % Version.tapir
+    val tapirhttp4sZIO    = "com.softwaremill.sttp.tapir" %% "tapir-http4s-server-zio1" % Version.tapir
+//    val tapirZIOHttp      = "com.softwaremill.sttp.tapir" %% "tapir-zio-http" % Version.tapir
 
     // Mleap
     lazy val mleapRuntime = "ml.combust.mleap" %% "mleap-runtime" % Version.mleap
@@ -78,11 +79,12 @@ object Dependencies {
     lazy val droste = "io.higherkindness" %% "droste-core" % Version.droste
 
     // Documentation
-    lazy val swaggerUiHtt4s = "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % Version.tapir
+    lazy val tapirSwagger = "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-bundle" % Version.tapir
     lazy val tapirCore = "com.softwaremill.sttp.tapir" %% "tapir-core" % Version.tapir
     lazy val tapirOpenApi = "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % Version.tapir
-    lazy val tapirOpenApiCirceYaml = "com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % Version.tapir
+    lazy val tapirOpenApiCirceYaml = "com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % Version.tapirCirce
     lazy val reftree = "com.kyleu" %% "reftree" % Version.reftree
+
 
     // Metrics
     val prometheusClient = "io.prometheus" % "simpleclient"        % Version.prometheus
@@ -137,11 +139,11 @@ object Dependencies {
   lazy val http: Seq[ModuleID] = Seq(
     Include.tapirhttp4sZIO,
     Include.tapirCore,
-    Include.tapirZIOHttp,
     Include.zioCache,
     Include.http4sClient,
     Include.http4s,
-    Include.http4sBlaze
+    Include.http4sBlazeClient,
+    Include.http4sBlazeServer
   )
 
   lazy val repo: Seq[ModuleID] = Seq(
@@ -158,7 +160,7 @@ object Dependencies {
   )
 
   lazy val docs = Seq(
-    Include.swaggerUiHtt4s,
+    Include.tapirSwagger,
     Include.tapirOpenApi,
     Include.tapirOpenApiCirceYaml,
     Include.reftree

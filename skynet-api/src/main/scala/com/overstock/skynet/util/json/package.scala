@@ -6,7 +6,7 @@ import ml.combust.bundle.serializer.SerializationFormat
 import ml.combust.mleap.core.types.{BasicType, StructField, StructType}
 import ml.combust.mleap.runtime.frame.{DefaultLeapFrame, Row}
 import sttp.tapir.{FieldName, Schema}
-import sttp.tapir.SchemaType.{SCoproduct, SProduct, SProductField}
+import sttp.tapir.SchemaType.{SCoproduct, SProduct, SProductField, SchemaWithValue}
 
 import java.net.URI
 import scala.concurrent.duration.{Duration, FiniteDuration}
@@ -24,10 +24,11 @@ import sttp.tapir.Schema.SName
 
 package object json extends TapirJsonCirce {
 
-  implicit def schemaWitness[T <: String](implicit W: Witness.Aux[T]): Schema[T] = Schema.schemaForString
+  implicit def schemaWitness[T <: String](implicit W: Witness.Aux[T]): Schema[T] =
+    Schema.schemaForString
     .map { string => if (string == W.value) Some(W.value) else None }(str => str)
-    .encodedExample(W.value)
-    .description(s"Value must be '${W.value}'")
+    .encodedExample(s""""${W.value}"""")
+    .description(s"""Value must be "${W.value}"""")
 
   object mleap {
 
@@ -111,15 +112,15 @@ package object json extends TapirJsonCirce {
             ),
             None
           )(_.value match {
-            case _: Boolean => Some(Schema.schemaForBoolean)
-            case _: Byte => Some(Schema.schemaForByte)
-            case _: Short => Some(Schema.schemaForShort)
-            case _: Int => Some(Schema.schemaForInt)
-            case _: Long => Some(Schema.schemaForLong)
-            case _: Float => Some(Schema.schemaForFloat)
-            case _: Double => Some(Schema.schemaForDouble)
-            case _: String => Some(Schema.schemaForString)
-            case _: ByteString => Some(byteStringSchema)
+            case v: Boolean => Some(SchemaWithValue(Schema.schemaForBoolean, v))
+            case v: Byte => Some(SchemaWithValue(Schema.schemaForByte, v))
+            case v: Short => Some(SchemaWithValue(Schema.schemaForShort, v))
+            case v: Int => Some(SchemaWithValue(Schema.schemaForInt, v))
+            case v: Long => Some(SchemaWithValue(Schema.schemaForLong, v))
+            case v: Float => Some(SchemaWithValue(Schema.schemaForFloat, v))
+            case v: Double => Some(SchemaWithValue(Schema.schemaForDouble, v))
+            case v: String => Some(SchemaWithValue(Schema.schemaForString, v))
+            case v: ByteString => Some(SchemaWithValue(byteStringSchema, v))
             case _ => None
           })
         )
@@ -128,20 +129,7 @@ package object json extends TapirJsonCirce {
   }
 
   implicit lazy val basicTypeSchema: Schema[BasicType] =
-    Schema.string[BasicType]
-      .description(List(
-        "string",
-        "boolean",
-        "byte",
-        "short",
-        "int",
-        "long",
-        "float",
-        "double",
-        "byte_string")
-        .map(s => s"'$s'")
-        .foldSmash("Must be one of [", ", ", "]"))
-      .encodedExample("double")
+    Schema.derivedEnumeration[BasicType].apply(Some(_.toString))
 
   implicit lazy val structFieldSchema: Schema[StructField] =
     ml.combust.mleap.json.circe.StructField.schemaStructField.map(s => Some(s.toMleapStructField)

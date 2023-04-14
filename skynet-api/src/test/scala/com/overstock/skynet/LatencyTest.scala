@@ -5,21 +5,23 @@ import com.overstock.skynet.http.Endpoints
 import com.overstock.skynet.domain.{ExecStrategy, Frame, GetSample, RankingResult, Select}
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.client.Client
-import org.http4s.{Request, Response}
+import org.http4s.{Request, Response, Uri}
 import plotly.element.BoxMean
 import plotly.layout.{Axis, Layout}
 import plotly.{Box, Plotly}
 import sttp.tapir.client.http4s.Http4sClientInterpreter
 import zio.clock.Clock
 import zio.duration.Duration
-import zio.{ExitCode, Has, RIO, Task, URIO, ZIO}
+import zio.{ExitCode, RIO, Task, URIO, ZIO}
 import zio.interop.catz._
 
 object LatencyTest extends Endpoints with zio.App {
 
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] = RIO.effectSuspend {
 
-    val baseUri :: model :: Nil = args
+    val uriString :: model :: Nil = args
+
+    val baseUri = Uri.fromString(uriString).right.get
 
     val nTrials   = 100
     val par       = 1
@@ -49,9 +51,9 @@ object LatencyTest extends Endpoints with zio.App {
 
         val interpreter = Http4sClientInterpreter[Task]()
 
-        val getSample = interpreter.toRequestUnsafe(getSampleInput, Some(baseUri))
+        val getSample = interpreter.toRequestThrowDecodeFailures(getSampleInput, Some(baseUri))
 
-        val rank = interpreter.toRequestUnsafe(rankEndpoint, Some(baseUri))
+        val rank = interpreter.toRequestThrowDecodeFailures(rankEndpoint, Some(baseUri))
 
         val client = BlazeClientBuilder[Task](runtime.platform.executor.asEC)
 
