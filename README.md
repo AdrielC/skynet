@@ -1,6 +1,8 @@
 Skynet
 =============================
 
+Machine Learning (MLeap) Model Serving application for Scala
+
 ## Goal
 The goal for this project is to provide an api to host and predict with mleap models, complete with Generated OpenApi documentation. This project has two main sub-modules:
  - `skynet-api` - http4s http server
