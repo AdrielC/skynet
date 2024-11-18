@@ -33,15 +33,15 @@ Machine Learning (MLeap) Model Serving application for Scala
 
 ## Application Structure
 
-- **Main Entry Point**: [`Starter.scala`](src/main/scala/com/overstock/skynet/Starter.scala)
+- **Main Entry Point**: [`Starter.scala`](skynet-api/src/main/scala/com/overstock/skynet/Starter.scala)
   - Bootstraps the service, initializes configurations, and starts the server.
   - Uses ZIO for dependency injection and environment management.
 
-- **API Definition**: [`Endpoints.scala`](src/main/scala/com/overstock/skynet/http/Endpoints.scala)
+- **API Definition**: [`Endpoints.scala`](skynet-api/src/main/scala/com/overstock/skynet/http/Endpoints.scala)
   - Defines RESTful API endpoints using Tapir.
   - Includes model management, transformation, and health check APIs.
 
-- **Routing**: [`Routes.scala`](src/main/scala/com/overstock/skynet/http/Routes.scala)
+- **Routing**: [`Routes.scala`](skynet-api/src/main/scala/com/overstock/skynet/http/Routes.scala)
   - Maps endpoints to route handlers and integrates Swagger for API documentation.
   - Includes middleware for metrics and error handling.
 
