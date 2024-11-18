@@ -3,191 +3,186 @@ Skynet
 
 Machine Learning (MLeap) Model Serving application for Scala
 
-## Goal
-The goal for this project is to provide an api to host and predict with mleap models, complete with Generated OpenApi documentation. This project has two main sub-modules:
- - `skynet-api` - http4s http server
- - `common` - common things could be defined for other sub-modules 
+# Skynet Project
 
+**Skynet** is a service designed for advanced model management, transformation, ranking, and visualization. It supports dynamic APIs for working with machine learning models and provides extensive health checks, metrics, and documentation.
 
-## Stack technologies
+---
 
-- [JDK 11](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
-- [SBT](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html)
-- ZIO for concurrency
-- [Circe](https://circe.github.io/circe/) for json serialization
-- [Cats](https://typelevel.org/cats/) for FP awesomeness
-- [ScalaTest](http://www.scalatest.org/) for test
-- [Tapir](https://github.com/softwaremill/tapir) for automatically generating an api documentation
+## Features
 
-## Resources
+- **Model Loading & Management**: Load, unload, and list models dynamically via API.
+- **Data Transformation**: Transform data using preloaded models.
+- **Ranking Framework**: Rank model outputs with customizable parameters.
+- **Visualization**: Generate computation graphs of loaded models.
+- **Health Checks**: Monitor both service and model health.
+- **Swagger Documentation**: Auto-generated OpenAPI specs with Swagger UI.
+- **Metrics**: Comprehensive monitoring and metrics for endpoints.
 
-- For setting up the initial `template` structure, we utilized
-  [Scala Pet Store](https://github.com/pauljamescleary/scala-pet-store).
+---
 
-- For STAGE/ PROD configuration, we utilized [Production
-  Configuration](https://www.playframework.com/documentation/2.6.x/ProductionConfiguration#overriding-configuration-with-system-properties)
+## Getting Started
 
-## Architecture
-### Domain Driven Design (DDD)
-Domain driven design is all about developing a _ubiquitous language_, which is a language that you can use to discuss your software with business folks (who presumably do not know programming).
+### Prerequisites
 
-DDD is all about making your code expressive, making sure that how you _talk_ about your software materializes in your code.  One of the best ways to do this is to keep you _domain_ pure.  That is, allow the business concepts and entities to be real things, and keep all the other cruft out.  However, HTTP, JDBC, SQL are not essential to domain, so we want to _decouple_ those as much as possible.
+- **Scala 3.x** and **sbt** for building and running the service.
+- **Docker** for containerization (optional).
+- Dependencies are managed in the SBT build file.
 
-### Onion (or Hexagonal) Architecture
-In concert with DDD, the [Onion Architecture](https://jeffreypalermo.com/2008/08/the-onion-architecture-part-3/) and [Hexagonal Architecture from Cockburn](https://java-design-patterns.com/patterns/hexagonal/) give us patterns on how to separate our domain from the ugliness of implementation.
+---
 
-We fit DDD an Onion together via the following mechanisms:
+## Application Structure
 
-**The domain package**
-The domain package constitutes the things inside our domain.  It is deliberately free of the ugliness of JDBC, JSON, HTTP, and the rest.
-We use `Services` as coarse-grained interfaces to our domain.  These typically represent real-world use cases. Often times, you see a 1-to-1 mapping of `Services` to `R` or HTTP API calls your application surfaces.
+- **Main Entry Point**: [`Starter.scala`](src/main/scala/com/overstock/skynet/Starter.scala)
+  - Bootstraps the service, initializes configurations, and starts the server.
+  - Uses ZIO for dependency injection and environment management.
 
-Inside of the **domain**, we see a few concepts:
+- **API Definition**: [`Endpoints.scala`](src/main/scala/com/overstock/skynet/http/Endpoints.scala)
+  - Defines RESTful API endpoints using Tapir.
+  - Includes model management, transformation, and health check APIs.
 
-1. `Service` - the coarse grained use cases that work with other domain concepts to realize your use-cases
-1. `Repository` - ways to get data into and out of persistent storage.  **Important: Repositories do not have any business logic in them, they should not know about the context in which they are used, and should not leak details of their implementations into the world**.
-1. `payloads` or `models` - things like `Tweet`, etc are all domain objects.  We keep these lean (i.e. free of behavior).
+- **Routing**: [`Routes.scala`](src/main/scala/com/overstock/skynet/http/Routes.scala)
+  - Maps endpoints to route handlers and integrates Swagger for API documentation.
+  - Includes middleware for metrics and error handling.
 
-**The repository package**
-The repository package is where the ugliness lives.  It has JDBC things, and the like.
-it contains implementations of our `Repositories`.  We may have 2 different implementations, an in-memory version as well as a **doobie** version.
+- **Build Configuration**: [`build.sbt`](build.sbt)
+  - Handles project dependencies, build plugins, and Docker configurations.
 
-**The http package**
-It contains the HTTP endpoints that we surface via **akka-http**.  You will also typically see JSON things in here via **circe**
+---
 
-**The util package**
-The util package could be considered infrastructure, as it has nothing to do with the domain.
+## Key API Endpoints
 
-**NOTE**
-All business logic is located in `domain` package, every package inside is
-related to some domain.
+### Model Operations
 
-Service classes contains high level logic that relate to data manipulation,
-that means that services MUST NOT implement storage.
+- **Load a Model**  
+  `PUT /models/{model}`  
+  Loads a model from a given URI (e.g., `file://`, `s3://`).
 
-For storage there are dedicated classes.
+- **Unload a Model**  
+  `DELETE /models/{model}`  
+  Unloads a model from the service.
 
-## Command line
+- **List All Models**  
+  `GET /models`  
+  Lists all currently loaded models.
 
-In order to run locally on a developer machine via the command line, go to
-source folder and execute
+- **Model Health Check**  
+  `GET /models/{model}/health`  
+  Performs a test prediction to verify the model is operational.
 
-```
-~/your-project-name/> sbt runServer
-```
+### Data Operations
 
-And also
-```
-~/your-project-name/> sbt ";project seed-api; ~reStart"
-```
+- **Transform Data**  
+  `POST /models/{model}/transform`  
+  Transforms input data using the specified model.
 
-## Pre-Commit Hook
+- **Rank Data**  
+  `POST /models/{model}/rank`  
+  Ranks transformed data with options for grouping and averaging.
 
-[Pre Commit](https://github.com/pre-commit/pre-commit) is a project on github to setup and maintain
-git commit hooks. The default hooks are defined in `.pre-commit-config.yaml`
+- **Get Sample Data**  
+  `GET /models/{model}/sample`  
+  Returns a sample data frame for a model.
 
-For installation on osx run
-```
-brew install pre-commit
-```
+### Visualization
 
-To setup the hooks with pre-commit run:
-```
-pre-commit install -f --install-hooks
-```
+- **Model Graph**  
+  `GET /models/{model}/graph`  
+  Visualizes the computation graph of the model.
 
-After that scalafmt checks your changed files for codestyle:
+### Service Health
 
-_Note:_ Conflicts should be resolved
+- **Service Health Check**  
+  `GET /health`  
+  Confirms the service is operational.
 
-## Deployment
+---
 
-This section describes how to deploy `template` to either `STAGE` or `PROD`.
+## Build & Run Instructions
 
-## Dependency Udpates
+### Build
+
 ```bash
-sbt dependencyUpdates
+sbt compile
 ```
 
-Lists newer versions of integrated dependencies from Maven/Ivy
+### Run
 
-sbt dependencyUpdates
-
-### Pre-Commit Hook
-This is for manage and configure Git hooks. We setup scalastyle and scalafmt for this project.
-pre-commit-hook is a Git hook manager that runs scalafmt on CHANGED .scala and .sbt files each time you commit them.
-It doesn’t allow you to commit if in your code something is not satisfactory with your configuration file.
-```
-pre-commit install -f --install-hooks
-```
-#### pre-commit
-
-We use [`pre-commit`](https://github.com/pre-commit/pre-commit) to setup and maintain shared commit hooks.
-Its configured in `.pre-commit-config.yaml` with scalastyle and scalafmt
-- .scalafmt.conf (see pre-commit-hook.yaml)
-- scalastyle-config.xml - (see pre-commit-hook.yaml)
-
-Install `pre-commit` either via `pip` OS independently:
 ```bash
-pip install pre-commit
+sbt run
 ```
 
-or via [homebrew](https://brew.sh/) if you are on Mac OS:
+The service will start and provide API access via `http://localhost:8080`.
+
+### Docker Build
+
+A Docker image can be built using:
+
 ```bash
-brew install pre-commit
+sbt docker:publishLocal
 ```
 
-#### Register the hooks
-```bash
-pre-commit install -f --install-hooks
-```
+This will create a containerized version of the service.
 
-NOTE: make sure that you have above tools locally installed. For that, follow the instruction on:
-- [scalafmt installation page](https://scalameta.org/scalafmt/docs/installation.html).
-- [scalastyle installation page](http://www.scalastyle.org/command-line.html).
+---
 
-You can also run `scalafmt`, `scalastyle` through `sbt scalafmt`/`sbt scalastyle` yet we use it for the pre-commit hook.
+## Dependencies
 
-Conflicts MUST BE resolved. The pre-commit will only show the error, not automatically fix them.
-To fix some issues automatically, run `scalafmt` and/or `scalastyle` yourself.
+### Core Libraries
 
-More about Git hook for [scalstyle and scalafrm](https://gist.github.com/Bunyod/9f4ba570b9ce7c13d94025c070a499b8)
+- **ZIO**: Functional effect handling.
+- **Tapir**: API definition and OpenAPI documentation.
+- **Http4s**: Web server and client.
 
-## Known issues
-Please change in SwaggerRoutes
-```
-getFromResourceDirectory("META-INF/resources/webjars/swagger-ui/swaggerVersion/")
-```
-to
-```
-getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-```
+### Machine Learning
 
-### Configuration via Pureconfig
+- **MLeap**: Runtime and executor for machine learning pipelines.
+- **XGBoost**: Predictor integration.
 
-Pureconfig's config file does not support uppercase and underscores. [Read here](https://github.com/pureconfig/pureconfig/issues/394)
+### Configuration
 
-## Integration test
-We use sbt suggested structure for integration test.
-- sbt integration test structure [explained here](https://www.scala-sbt.org/1.x/docs/Testing.html#Integration+Tests)
+- **PureConfig**: Simplified configuration management.
+- **Typesafe Config**: Configuration library.
 
-```
-src
-  >it
-  >main
-  >test
-```
+### JSON & Serialization
 
-## How to use sbt-coverage
+- **Circe**: JSON serialization and parsing.
+- **Protobuf**: Support for protocol buffers.
 
-Run the tests with enabled coverage:
-```
-$ sbt clean test
-```
+### Logging
 
-To generate the coverage reports run
-```
-$ sbt coverageReport
-```
+- **Logback**: Logging framework.
+- **Scala Logging**: Integration for logging in Scala.
 
-Coverage reports will be in target/scala-2.12/scoverage-report/index.html.
+### Documentation
+
+- **Swagger UI**: Interactive API documentation.
+- **RefTree**: Visualization of computation graphs.
+
+### Metrics
+
+- **Prometheus**: Metrics collection and integration.
+
+---
+
+## API Documentation
+
+Swagger UI is available at:
+`http://localhost:8080/swagger-ui`
+
+This provides an interactive interface to explore and test the API.
+
+---
+
+## Metrics
+
+Metrics are exposed at:
+`http://localhost:8080/metrics`
+
+These include endpoint-specific metrics and overall service health data.
+
+---
+
+## Contributing
+
+Feel free to contribute by submitting issues or pull requests. Follow functional programming principles and the existing code style.
