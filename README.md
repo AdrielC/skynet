@@ -137,7 +137,7 @@ This will create a containerized version of the service.
 ### Machine Learning
 
 - **MLeap**: Runtime and executor for machine learning pipelines.
-- **XGBoost**: Predictor integration.
+- **XGBoost**: Predictor integration. The implementation here is much faster than MLeaps original implementation. This allows for BLAZINGLY FAST XGBoost serving!
 
 ### Configuration
 
