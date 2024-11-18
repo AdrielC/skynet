@@ -25,7 +25,7 @@ Machine Learning (MLeap) Model Serving application for Scala
 
 ### Prerequisites
 
-- **Scala 3.x** and **sbt** for building and running the service.
+- **Scala 2.13.** and **sbt** for building and running the service.
 - **Docker** for containerization (optional).
 - Dependencies are managed in the SBT build file.
 
