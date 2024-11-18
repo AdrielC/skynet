@@ -1,10 +1,6 @@
 Skynet
 =============================
 
-Machine Learning (MLeap) Model Serving application for Scala
-
-# Skynet Project
-
 **Skynet** is a service designed for advanced model management, transformation, ranking, and visualization. It supports dynamic APIs for working with machine learning models and provides extensive health checks, metrics, and documentation.
 
 ---
