@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#050706" />
+    <meta
+      name="description"
+      content="Skynet is an open-source Scala runtime for loading, transforming, ranking, and observing portable MLeap models."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Skynet — Portable ML Model Serving" />
+    <meta
+      property="og:description"
+      content="Load portable bundles. Transform frames. Rank outputs. Observe the runtime."
+    />
+    <meta property="og:url" content="https://adrielc.github.io/skynet/" />
+    <meta property="og:image" content="https://adrielc.github.io/skynet/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Skynet — Portable ML Model Serving" />
+    <meta
+      name="twitter:description"
+      content="An open-source Scala control plane for portable MLeap models."
+    />
+    <meta name="twitter:image" content="https://adrielc.github.io/skynet/og.png" />
+    <link rel="canonical" href="https://adrielc.github.io/skynet/" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Skynet — Portable ML Model Serving</title>
+  </head>
+  <body>
+    <div class="reading-progress" aria-hidden="true"><span></span></div>
+
+    <header class="site-header" data-header>
+      <a class="wordmark" href="#top" aria-label="Skynet home">
+        <span class="wordmark-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <strong>SKYNET</strong>
+        <span>/ MODEL RUNTIME</span>
+      </a>
+
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span>INDEX</span><i></i><i></i>
+      </button>
+
+      <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+        <a href="#overview">Overview</a>
+        <a href="#lifecycle">Lifecycle</a>
+        <a href="#api">API</a>
+        <a href="#operate">Operate</a>
+        <a class="nav-source" href="https://github.com/AdrielC/skynet">Source <span>↗</span></a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell">
+        <div class="hero-copy reveal">
+          <div class="eyebrow"><i></i> OPEN SOURCE / APACHE-2.0 / SCALA 2.12</div>
+          <h1>
+            <span>LOAD.</span>
+            <span>TRANSFORM.</span>
+            <span>RANK.</span>
+          </h1>
+          <p>
+            Skynet is a production-shaped runtime for portable MLeap bundles. It turns model
+            artifacts into inspectable HTTP services—with explicit lifecycle control, typed frame
+            transforms, ranking, health checks, graphs, and metrics.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#quickstart">Start serving <span>↓</span></a>
+            <a class="text-action" href="https://github.com/AdrielC/skynet">
+              Explore the code <span>↗</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="runtime-panel reveal" aria-label="Model serving lifecycle visualization">
+          <div class="runtime-head">
+            <span>RUNTIME / 0.3.3</span>
+            <span class="runtime-live"><i></i> REFERENCE</span>
+          </div>
+
+          <div class="runtime-model">
+            <span class="model-label">EXAMPLE / RECOMMENDER</span>
+            <strong>portable_bundle.zip</strong>
+            <span class="model-origin">s3://models/production</span>
+          </div>
+
+          <div class="runtime-flow" aria-hidden="true">
+            <div class="flow-node active"><i>01</i><span>FETCH</span></div>
+            <b></b>
+            <div class="flow-node active"><i>02</i><span>LOAD</span></div>
+            <b></b>
+            <div class="flow-node warm"><i>03</i><span>WARM</span></div>
+            <b></b>
+            <div class="flow-node ready"><i>04</i><span>SERVE</span></div>
+          </div>
+
+          <div class="runtime-output">
+            <div><span>METRICS</span><strong>ON</strong></div>
+            <div><span>EXEC</span><strong>par-12</strong></div>
+            <div><span>FRAMES</span><strong>04</strong></div>
+          </div>
+
+          <div class="signal-field" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+      </section>
+
+      <section class="fact-rail" aria-label="Skynet facts">
+        <div><span>ORIGINS</span><strong>FILE / S3 / GCS</strong></div>
+        <div><span>FRAME SHAPES</span><strong>04</strong></div>
+        <div><span>HTTP OPERATIONS</span><strong>10</strong></div>
+        <div><span>RUNTIME</span><strong>ZIO + HTTP4S</strong></div>
+      </section>
+
+      <section class="section-shell overview" id="overview">
+        <div class="section-intro reveal">
+          <span class="section-index">01 / SYSTEM</span>
+          <h2>A control plane for the model after training.</h2>
+          <p>
+            Training produces an artifact. Skynet handles what comes next: acquiring the bundle,
+            loading its transformer graph, understanding its schema, executing it safely, and
+            exposing enough evidence to operate it.
+          </p>
+        </div>
+
+        <div class="capability-grid">
+          <article class="capability-card reveal">
+            <span>01</span>
+            <div class="card-light red"></div>
+            <h3>Portable by construction</h3>
+            <p>Load MLeap bundles from local files, Amazon S3, or Google Cloud Storage.</p>
+            <code>file:// · s3:// · gs://</code>
+          </article>
+          <article class="capability-card reveal">
+            <span>02</span>
+            <div class="card-light amber"></div>
+            <h3>Frames with structure</h3>
+            <p>Serve Leap, Cartesian, Context, and Prefixed frame shapes through one API.</p>
+            <code>Frame → DefaultLeapFrame</code>
+          </article>
+          <article class="capability-card reveal">
+            <span>03</span>
+            <div class="card-light green"></div>
+            <h3>Ranking as a first-class path</h3>
+            <p>Transform, select, group, average, sort, and return top-k identifiers.</p>
+            <code>rank · group · avg · k</code>
+          </article>
+          <article class="capability-card reveal">
+            <span>04</span>
+            <div class="card-light green"></div>
+            <h3>Inspect before guessing</h3>
+            <p>Generate sample frames, inspect schemas, render model graphs, and warm models.</p>
+            <code>sample · graph · health</code>
+          </article>
+          <article class="capability-card reveal">
+            <span>05</span>
+            <div class="card-light amber"></div>
+            <h3>Parallelism per request</h3>
+            <p>Choose sequential, unconstrained parallel, or bounded parallel execution.</p>
+            <code>seq · par · par-n</code>
+          </article>
+          <article class="capability-card reveal">
+            <span>06</span>
+            <div class="card-light red"></div>
+            <h3>Operational surface included</h3>
+            <p>Swagger, service and model health, latency histograms, errors, and pool metrics.</p>
+            <code>/docs · /health · /metrics</code>
+          </article>
+        </div>
+      </section>
+
+      <section class="lifecycle" id="lifecycle">
+        <div class="section-shell">
+          <div class="section-intro inverse reveal">
+            <span class="section-index">02 / LIFECYCLE</span>
+            <h2>The entire serving path is visible.</h2>
+            <p>
+              Each stage has a clear responsibility. Change the artifact source without changing
+              inference. Change request parallelism without rebuilding the service.
+            </p>
+          </div>
+
+          <ol class="lifecycle-rail" aria-label="Model serving lifecycle">
+            <li class="reveal">
+              <span>01</span><i></i>
+              <h3>Register</h3>
+              <p>Name a model and provide its bundle URI.</p>
+              <code>PUT /models/{model}</code>
+            </li>
+            <li class="reveal">
+              <span>02</span><i></i>
+              <h3>Acquire</h3>
+              <p>Resolve the URI through the matching repository adapter.</p>
+              <code>file · S3 · GCS</code>
+            </li>
+            <li class="reveal">
+              <span>03</span><i></i>
+              <h3>Load</h3>
+              <p>Deserialize the MLeap bundle and cache its transformer.</p>
+              <code>Bundle[Transformer]</code>
+            </li>
+            <li class="reveal">
+              <span>04</span><i></i>
+              <h3>Warm</h3>
+              <p>Generate schema-correct sample frames and execute predictions.</p>
+              <code>GET /models/{model}/health</code>
+            </li>
+            <li class="reveal">
+              <span>05</span><i></i>
+              <h3>Serve</h3>
+              <p>Transform or rank frames with request-level execution control.</p>
+              <code>POST /transform · /rank</code>
+            </li>
+            <li class="reveal">
+              <span>06</span><i></i>
+              <h3>Observe</h3>
+              <p>Read response, failure, latency, and executor-pool metrics.</p>
+              <code>GET /metrics</code>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section-shell api-section" id="api">
+        <div class="section-intro reveal">
+          <span class="section-index">03 / HTTP API</span>
+          <h2>A small surface with deep control.</h2>
+          <p>
+            Tapir defines the endpoints once and derives the OpenAPI document used by the bundled
+            Swagger UI. Filter the operations below by intent.
+          </p>
+        </div>
+
+        <div class="api-toolbar reveal" role="group" aria-label="Filter API endpoints">
+          <button class="api-filter active" type="button" data-filter="all">All <span>10</span></button>
+          <button class="api-filter" type="button" data-filter="lifecycle">Lifecycle <span>04</span></button>
+          <button class="api-filter" type="button" data-filter="inference">Inference <span>02</span></button>
+          <button class="api-filter" type="button" data-filter="inspect">Inspect <span>04</span></button>
+        </div>
+
+        <div class="endpoint-list reveal" id="endpoint-list" aria-live="polite"></div>
+
+        <div class="request-lab reveal">
+          <div class="request-lab-head">
+            <div>
+              <span>REQUEST LAB</span>
+              <h3>From artifact to ranked output.</h3>
+            </div>
+            <div class="request-tabs" role="tablist" aria-label="Request examples">
+              <button type="button" class="active" role="tab" aria-selected="true" data-example="load">Load</button>
+              <button type="button" role="tab" aria-selected="false" data-example="transform">Transform</button>
+              <button type="button" role="tab" aria-selected="false" data-example="rank">Rank</button>
+            </div>
+          </div>
+          <div class="code-window">
+            <div class="code-window-head">
+              <span id="request-label">PUT /models/recommender</span>
+              <button class="copy-button" type="button" data-copy-target="request-code">Copy</button>
+            </div>
+            <pre><code id="request-code"></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="quickstart" id="quickstart">
+        <div class="section-shell quickstart-layout">
+          <div class="section-intro inverse reveal">
+            <span class="section-index">04 / QUICK START</span>
+            <h2>Serve a bundle locally.</h2>
+            <p>
+              Skynet is an open-source runtime, not a hosted account. Clone it, choose a port, and
+              register the model artifact you want the process to serve.
+            </p>
+            <div class="prereq-list">
+              <span>JDK 11</span><span>sbt 1.x</span><span>MLeap bundle</span>
+            </div>
+          </div>
+
+          <div class="steps reveal">
+            <article>
+              <span>01</span>
+              <div>
+                <h3>Clone and run</h3>
+                <div class="inline-code">
+                  <code>git clone https://github.com/AdrielC/skynet.git</code>
+                  <button type="button" class="copy-button" data-copy-value="git clone https://github.com/AdrielC/skynet.git">Copy</button>
+                </div>
+                <div class="inline-code">
+                  <code>cd skynet &amp;&amp; HTTP_PORT=8080 sbt run</code>
+                  <button type="button" class="copy-button" data-copy-value="cd skynet &amp;&amp; HTTP_PORT=8080 sbt run">Copy</button>
+                </div>
+              </div>
+            </article>
+            <article>
+              <span>02</span>
+              <div>
+                <h3>Verify the runtime</h3>
+                <div class="inline-code">
+                  <code>curl http://localhost:8080/health</code>
+                  <button type="button" class="copy-button" data-copy-value="curl http://localhost:8080/health">Copy</button>
+                </div>
+              </div>
+            </article>
+            <article>
+              <span>03</span>
+              <div>
+                <h3>Register a bundle</h3>
+                <div class="inline-code multiline">
+                  <code>curl -X PUT http://localhost:8080/models/recommender --data 's3://models/recommender.zip'</code>
+                  <button type="button" class="copy-button" data-copy-value="curl -X PUT http://localhost:8080/models/recommender --data 's3://models/recommender.zip'">Copy</button>
+                </div>
+              </div>
+            </article>
+            <article>
+              <span>04</span>
+              <div>
+                <h3>Inspect and test</h3>
+                <p>
+                  Open <code>http://localhost:8080/docs</code> for Swagger, or ask the model for a
+                  schema-correct sample at <code>/models/recommender/sample</code>.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-shell operate" id="operate">
+        <div class="section-intro reveal">
+          <span class="section-index">05 / OPERATE</span>
+          <h2>Know what the runtime is doing.</h2>
+          <p>
+            Skynet’s operational surface covers the service, each loaded model, every named
+            endpoint, and the executors doing the work.
+          </p>
+        </div>
+
+        <div class="operate-grid">
+          <div class="metric-console reveal">
+            <div class="console-head"><span>PROMETHEUS / LIVE</span><i></i></div>
+            <div class="metric-wave" aria-hidden="true">
+              <span style="--h: 26%"></span><span style="--h: 44%"></span><span style="--h: 38%"></span>
+              <span style="--h: 62%"></span><span style="--h: 50%"></span><span style="--h: 76%"></span>
+              <span style="--h: 58%"></span><span style="--h: 84%"></span><span style="--h: 54%"></span>
+              <span style="--h: 68%"></span><span style="--h: 48%"></span><span style="--h: 72%"></span>
+              <span style="--h: 42%"></span><span style="--h: 64%"></span><span style="--h: 36%"></span>
+              <span style="--h: 56%"></span><span style="--h: 30%"></span><span style="--h: 46%"></span>
+            </div>
+            <dl>
+              <div><dt>http_requests_duration_millis</dt><dd>endpoint × status</dd></div>
+              <div><dt>http_requests_total</dt><dd>service × error</dd></div>
+              <div><dt>workers_count</dt><dd>blocking × async</dd></div>
+              <div><dt>pool_tasks_enqueued</dt><dd>executor pressure</dd></div>
+            </dl>
+          </div>
+
+          <div class="operations-list reveal">
+            <article><span>HEALTH / SERVICE</span><code>GET /health</code><p>Confirms the model registry is available.</p></article>
+            <article><span>HEALTH / MODEL</span><code>GET /models/{model}/health</code><p>Runs generated sample data through the loaded transformer.</p></article>
+            <article><span>SCHEMA / SAMPLE</span><code>GET /models/{model}/sample</code><p>Produces input shaped to the model’s declared schema.</p></article>
+            <article><span>GRAPH / INSPECT</span><code>GET /models/{model}/graph</code><p>Renders the model’s internal computation graph as SVG.</p></article>
+          </div>
+        </div>
+
+        <aside class="status-note reveal">
+          <span>PROJECT STATUS</span>
+          <p>
+            Skynet is a public reference implementation built on Scala 2.12.9, ZIO 1, HTTP4s,
+            Tapir, and MLeap 0.16. It is not a managed hosted service. Review and update dependencies,
+            security controls, and deployment policy before using it for new production workloads.
+          </p>
+        </aside>
+      </section>
+
+      <section class="closing">
+        <div class="section-shell closing-inner reveal">
+          <span class="section-index">OPEN SOURCE / BUILD WITH IT</span>
+          <h2>The model is portable.<br />The runtime should be legible.</h2>
+          <div>
+            <a class="primary-action light" href="https://github.com/AdrielC/skynet">View source <span>↗</span></a>
+            <a class="text-action light" href="https://github.com/AdrielC/skynet/issues">Open an issue <span>↗</span></a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <a class="wordmark" href="#top"><strong>SKYNET</strong><span>/ MODEL RUNTIME</span></a>
+      <p>Apache-2.0 · Designed for inspectable model serving.</p>
+      <span id="year"></span>
+    </footer>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
