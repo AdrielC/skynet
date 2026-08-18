@@ -1,184 +1,129 @@
-Skynet
-=============================
+# Skynet
 
-**Skynet** is a service designed for advanced model management, transformation, ranking, and visualization. It supports dynamic APIs for working with machine learning models and provides extensive health checks, metrics, and documentation.
+Skynet is an open-source Scala runtime for serving portable [MLeap](https://mleap-docs.combust.ml/) model bundles. It owns the part of the lifecycle after training: acquiring an artifact, loading and warming its transformer graph, accepting structured frames, transforming or ranking results, and exposing the evidence needed to operate the service.
 
----
+**[Read the illustrated documentation](https://adrielc.github.io/skynet/)**
 
-## Features
+> **Project status:** This repository is a public reference implementation built on Scala 2.12.9, ZIO 1, HTTP4s, Tapir, and MLeap 0.16. It is not a managed hosted service. Review and update dependencies, security controls, and deployment policy before using it for new production workloads.
 
-- **Model Loading & Management**: Load, unload, and list models dynamically via API.
-- **Data Transformation**: Transform data using preloaded models.
-- **Ranking Framework**: Rank model outputs with customizable parameters.
-- **Visualization**: Generate computation graphs of loaded models.
-- **Health Checks**: Monitor both service and model health.
-- **Swagger Documentation**: Auto-generated OpenAPI specs with Swagger UI.
-- **Metrics**: Comprehensive monitoring and metrics for endpoints.
+## What it does
 
----
+- Registers and unloads named model bundles at runtime.
+- Acquires bundles from local files, Amazon S3, or Google Cloud Storage.
+- Accepts Leap, Cartesian, Context, and Prefixed frame shapes.
+- Transforms frames with sequential, parallel, or bounded-parallel execution.
+- Ranks output by an expression, with top-k, grouping, averaging, and field selection.
+- Generates schema-correct sample data and warms models with real transformations.
+- Exposes model metadata, health checks, computation graphs, Swagger, and Prometheus metrics.
 
-## Getting Started
+## Architecture
 
-### Prerequisites
-
-- **Scala 2.13.** and **sbt** for building and running the service.
-- **Docker** for containerization (optional).
-- Dependencies are managed in the SBT build file.
-
----
-
-## Application Structure
-
-- **Main Entry Point**: [`Starter.scala`](skynet-api/src/main/scala/com/overstock/skynet/Starter.scala)
-  - Bootstraps the service, initializes configurations, and starts the server.
-  - Uses ZIO for dependency injection and environment management.
-
-- **API Definition**: [`Endpoints.scala`](skynet-api/src/main/scala/com/overstock/skynet/http/Endpoints.scala)
-  - Defines RESTful API endpoints using Tapir.
-  - Includes model management, transformation, and health check APIs.
-
-- **Routing**: [`Routes.scala`](skynet-api/src/main/scala/com/overstock/skynet/http/Routes.scala)
-  - Maps endpoints to route handlers and integrates Swagger for API documentation.
-  - Includes middleware for metrics and error handling.
-
-- **Build Configuration**: [`build.sbt`](build.sbt)
-  - Handles project dependencies, build plugins, and Docker configurations.
-
----
-
-## Key API Endpoints
-
-### Model Operations
-
-- **Load a Model**  
-  `PUT /models/{model}`  
-  Loads a model from a given URI (e.g., `file://`, `s3://`).
-
-- **Unload a Model**  
-  `DELETE /models/{model}`  
-  Unloads a model from the service.
-
-- **List All Models**  
-  `GET /models`  
-  Lists all currently loaded models.
-
-- **Model Health Check**  
-  `GET /models/{model}/health`  
-  Performs a test prediction to verify the model is operational.
-
-### Data Operations
-
-- **Transform Data**  
-  `POST /models/{model}/transform`  
-  Transforms input data using the specified model.
-
-- **Rank Data**  
-  `POST /models/{model}/rank`  
-  Ranks transformed data with options for grouping and averaging.
-
-- **Get Sample Data**  
-  `GET /models/{model}/sample`  
-  Returns a sample data frame for a model.
-
-### Visualization
-
-- **Model Graph**  
-  `GET /models/{model}/graph`  
-  Visualizes the computation graph of the model.
-
-### Service Health
-
-- **Service Health Check**  
-  `GET /health`  
-  Confirms the service is operational.
-
----
-
-## Build & Run Instructions
-
-### Build
-
-```bash
-sbt compile
+```text
+bundle URI
+   │
+   ▼
+repository adapter ── file / S3 / GCS
+   │
+   ▼
+model registry ── cached MLeap transformer
+   │
+   ├── sample / graph / health
+   │
+   ▼
+frame decoder ── transform ── select / rank ── HTTP response
+                                  │
+                                  └── Prometheus metrics
 ```
 
-### Run
+The HTTP surface is defined once with Tapir. The same definitions drive request decoding and the OpenAPI document served through Swagger UI. ZIO manages effects and runtime layers; HTTP4s serves the routes; MLeap executes the portable transformer graph.
+
+## Run locally
+
+Prerequisites: JDK 11, sbt 1.x, and an MLeap bundle you can access.
 
 ```bash
-sbt run
+git clone https://github.com/AdrielC/skynet.git
+cd skynet
+HTTP_PORT=8080 sbt run
 ```
 
-The service will start and provide API access via `http://localhost:8080`.
+The checked-in default is port `80`; `HTTP_PORT=8080` avoids requiring a privileged port for local development.
 
-### Docker Build
-
-A Docker image can be built using:
+Verify the process:
 
 ```bash
+curl http://localhost:8080/health
+```
+
+Register a model bundle. The request body is its URI:
+
+```bash
+curl -X PUT \
+  http://localhost:8080/models/recommender \
+  --header 'Content-Type: text/plain' \
+  --data 's3://models/production/recommender.zip'
+```
+
+Then open `http://localhost:8080/docs` for Swagger or fetch a schema-correct input example:
+
+```bash
+curl http://localhost:8080/models/recommender/sample
+```
+
+## API
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `PUT` | `/models/{model}` | Register a bundle URI under a model name. |
+| `DELETE` | `/models/{model}` | Evict the model and invalidate its cached transformer. |
+| `GET` | `/models/{model}` | Read bundle origin, metadata, and schemas. |
+| `GET` | `/models` | List registered model names. |
+| `POST` | `/models/{model}/transform` | Transform a frame; optionally select fields and rank top-k rows. |
+| `POST` | `/models/{model}/rank` | Transform and rank identifiers, with grouping and score averaging. |
+| `GET` | `/models/{model}/sample` | Generate input matching the model schema. |
+| `GET` | `/models/{model}/graph` | Render the transformer graph as SVG. |
+| `GET` | `/models/{model}/health` | Run generated samples through one model. |
+| `GET` | `/health` | Check that the service and model registry respond. |
+
+### Execution and missing-data controls
+
+Transform and rank requests accept an `exec` query parameter:
+
+- `seq` — transform rows sequentially.
+- `par` — use unbounded ZIO parallelism.
+- `par-N` — cap parallelism at `N`, for example `par-8`.
+
+The `missing` parameter is either `impute` (the default) or `error`. Imputation uses an empty value appropriate to the missing field type.
+
+## Operations
+
+- `/docs` — bundled Swagger UI.
+- `/metrics` — Prometheus metrics for request totals, failures, latency, and executor pools.
+- `/health` — service-level health.
+- `/models/{model}/health` — transformation-level health for one model.
+- `/models/{model}/graph` — computation graph rendering; the Docker image installs Graphviz.
+
+The model cache holds five transformers for 30 minutes by default. The runtime also supports environment overrides for HTTP behavior, model execution strategy, warmup row count, and executor sizing; see [`reference.conf`](skynet-api/src/main/resources/reference.conf) for the complete configuration surface.
+
+## Build and test
+
+```bash
+sbt test
+sbt assembly
 sbt docker:publishLocal
 ```
 
-This will create a containerized version of the service.
+The Docker build packages the assembly on JDK 11 and installs the native libraries required by XGBoost and graph rendering.
 
----
+## Source map
 
-## Dependencies
+- [`Starter.scala`](skynet-api/src/main/scala/com/overstock/skynet/Starter.scala) — process entry point and runtime layers.
+- [`Endpoints.scala`](skynet-api/src/main/scala/com/overstock/skynet/http/Endpoints.scala) — Tapir endpoint definitions.
+- [`Routes.scala`](skynet-api/src/main/scala/com/overstock/skynet/http/Routes.scala) — route interpreters and middleware.
+- [`Frame.scala`](skynet-api/src/main/scala/com/overstock/skynet/domain/Frame.scala) — supported frame shapes and codecs.
+- [`ModelService.scala`](skynet-api/src/main/scala/com/overstock/skynet/service/model/ModelService.scala) — transform and ranking orchestration.
+- [`reference.conf`](skynet-api/src/main/resources/reference.conf) — runtime configuration and defaults.
 
-### Core Libraries
+## License
 
-- **ZIO**: Functional effect handling.
-- **Tapir**: API definition and OpenAPI documentation.
-- **Http4s**: Web server and client.
-
-### Machine Learning
-
-- **MLeap**: Runtime and executor for machine learning pipelines.
-- **XGBoost**: Predictor integration. The implementation here is much faster than MLeaps original implementation. This allows for BLAZINGLY FAST XGBoost serving!
-
-### Configuration
-
-- **PureConfig**: Simplified configuration management.
-- **Typesafe Config**: Configuration library.
-
-### JSON & Serialization
-
-- **Circe**: JSON serialization and parsing.
-- **Protobuf**: Support for protocol buffers.
-
-### Logging
-
-- **Logback**: Logging framework.
-- **Scala Logging**: Integration for logging in Scala.
-
-### Documentation
-
-- **Swagger UI**: Interactive API documentation.
-- **RefTree**: Visualization of computation graphs.
-
-### Metrics
-
-- **Prometheus**: Metrics collection and integration.
-
----
-
-## API Documentation
-
-Swagger UI is available at:
-`http://localhost:8080/swagger-ui`
-
-This provides an interactive interface to explore and test the API.
-
----
-
-## Metrics
-
-Metrics are exposed at:
-`http://localhost:8080/metrics`
-
-These include endpoint-specific metrics and overall service health data.
-
----
-
-## Contributing
-
-Feel free to contribute by submitting issues or pull requests. Follow functional programming principles and the existing code style.
+[Apache License 2.0](LICENSE)
